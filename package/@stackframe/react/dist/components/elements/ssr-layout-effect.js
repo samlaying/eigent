@@ -29,7 +29,14 @@ var import_react = require("react");
 var import_jsx_runtime = require("react/jsx-runtime");
 function SsrScript(props) {
   (0, import_react.useLayoutEffect)(() => {
-    (0, eval)(props.script);
+    try {
+      (0, eval)(props.script);
+    } catch (error) {
+      console.warn(
+        "[SsrScript] Skipped script eval due to CSP restrictions",
+        error
+      );
+    }
   }, []);
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
     "script",

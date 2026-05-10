@@ -52,7 +52,8 @@ export default function ChatBox(): JSX.Element {
 
   const { t } = useTranslation();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [hasModel, setHasModel] = useState(false);
+  const IS_LOCAL_MODE = import.meta.env.VITE_USE_LOCAL_PROXY === 'true';
+  const [hasModel, setHasModel] = useState(IS_LOCAL_MODE);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [_hasSearchKey, setHasSearchKey] = useState<any>(false);
@@ -84,6 +85,11 @@ export default function ChatBox(): JSX.Element {
 
   // Shared function to check model configuration
   const checkModelConfig = useCallback(async () => {
+    if (IS_LOCAL_MODE) {
+      setHasModel(true);
+      setIsConfigLoaded(true);
+      return;
+    }
     try {
       if (modelType === 'cloud') {
         // For cloud model, check if API key exists
@@ -328,9 +334,13 @@ export default function ChatBox(): JSX.Element {
 
       // Check model configuration before starting task
       if (!hasModel) {
-        toast.error('Please select a model first.');
-        navigate('/history?tab=agents');
-        return;
+        if (IS_LOCAL_MODE) {
+          toast.warning('No model configured, using default.');
+        } else {
+          toast.error('Please select a model first.');
+          navigate('/history?tab=agents');
+          return;
+        }
       }
 
       let _token: string = token.split('__')[0];
@@ -431,9 +441,13 @@ export default function ChatBox(): JSX.Element {
 
     // Check model configuration
     if (!hasModel) {
-      toast.error('Please select a model first.');
-      navigate('/history?tab=agents');
-      return;
+      if (IS_LOCAL_MODE) {
+        toast.warning('No model configured, using default.');
+      } else {
+        toast.error('Please select a model first.');
+        navigate('/history?tab=agents');
+        return;
+      }
     }
     const tempMessageContent = messageStr || message;
 
@@ -1110,7 +1124,7 @@ export default function ChatBox(): JSX.Element {
 
             {/* Suggestion Area - Bottom area, flex-1 to push content up */}
             <div className="mt-3 flex h-[210px] flex-1 items-start justify-center gap-2">
-              {!hasModel ? (
+              {!hasModel && !IS_LOCAL_MODE ? (
                 <div className="flex items-center gap-2">
                   <div
                     onClick={() => {

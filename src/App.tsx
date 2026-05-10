@@ -24,6 +24,7 @@ import { useBackgroundTaskProcessor } from './hooks/useBackgroundTaskProcessor';
 import { useExecutionSubscription } from './hooks/useExecutionSubscription';
 import { useTriggerTaskExecutor } from './hooks/useTriggerTaskExecutor';
 import { hasStackKeys } from './lib';
+import { useAppModeStore } from './store/appModeStore';
 import { useAuthStore } from './store/authStore';
 
 const HAS_STACK_KEYS = hasStackKeys();
@@ -32,15 +33,30 @@ function App() {
   const navigate = useNavigate();
   const { setInitState } = useAuthStore();
   const { token } = useAuthStore();
+  const isLocalProxyMode = import.meta.env.VITE_USE_LOCAL_PROXY === 'true';
 
   // Subscribe to execution events when user is authenticated
-  // Note: Removed triggers.length check to prevent reconnection on every trigger update
-  const shouldSubscribe = !!token;
+  // Local backend mode does not expose /api/v1/execution/subscribe yet.
+  const shouldSubscribe = !!token && !isLocalProxyMode;
   useExecutionSubscription(shouldSubscribe);
   useBackgroundTaskProcessor();
 
   // Execute triggered tasks automatically when WebSocket events are received
   useTriggerTaskExecutor();
+
+  // Keyboard shortcut: Ctrl/Cmd+Shift+M to toggle interface mode
+  const toggleMode = useAppModeStore((s) => s.toggleMode);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'M') {
+        e.preventDefault();
+        toggleMode();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleMode]);
 
   useEffect(() => {
     const handleShareCode = (event: any, share_token: string) => {

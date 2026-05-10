@@ -14,19 +14,17 @@
 
 import animationData from '@/assets/animation/onboarding_success.json';
 import { AnimationJson } from '@/components/AnimationJson';
+import CloseNoticeDialog from '@/components/Dialog/CloseNotice';
+import HistorySidebar from '@/components/HistorySidebar';
+import InstallationErrorDialog from '@/components/InstallStep/InstallationErrorDialog/InstallationErrorDialog';
 import { InstallDependencies } from '@/components/InstallStep/InstallDependencies';
 import TopBar from '@/components/TopBar';
 import useChatStoreAdapter from '@/hooks/useChatStoreAdapter';
 import { useInstallationSetup } from '@/hooks/useInstallationSetup';
-import NavBar from '@/modes/claude/NavBar';
-import { useAppModeStore } from '@/store/appModeStore';
 import { useAuthStore } from '@/store/authStore';
 import { useInstallationUI } from '@/store/installationStore';
 import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import CloseNoticeDialog from '../Dialog/CloseNotice';
-import HistorySidebar from '../HistorySidebar';
-import InstallationErrorDialog from '../InstallStep/InstallationErrorDialog/InstallationErrorDialog';
 
 const Layout = () => {
   const {
@@ -36,8 +34,6 @@ const Layout = () => {
     setInitState: _setInitState,
   } = useAuthStore();
   const [noticeOpen, setNoticeOpen] = useState(false);
-
-  const mode = useAppModeStore((s) => s.mode);
 
   //Get Chatstore for the active project's task
   const { chatStore } = useChatStoreAdapter();
@@ -110,13 +106,10 @@ const Layout = () => {
 
         {/* Main app content */}
         {shouldShowMainContent && (
-          <div className={`flex h-full ${mode === 'claude' ? 'flex-row' : ''}`}>
-            {mode === 'claude' && <NavBar />}
-            <div className="relative flex-1 overflow-hidden">
-              <Outlet />
-              <HistorySidebar />
-            </div>
-          </div>
+          <>
+            <Outlet />
+            <HistorySidebar />
+          </>
         )}
 
         {(backendError || (error && installationState === 'error')) && (

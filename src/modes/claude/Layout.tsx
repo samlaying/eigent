@@ -14,21 +14,20 @@
 
 import animationData from '@/assets/animation/onboarding_success.json';
 import { AnimationJson } from '@/components/AnimationJson';
+import CloseNoticeDialog from '@/components/Dialog/CloseNotice';
+import HistorySidebar from '@/components/HistorySidebar';
+import InstallationErrorDialog from '@/components/InstallStep/InstallationErrorDialog/InstallationErrorDialog';
 import { InstallDependencies } from '@/components/InstallStep/InstallDependencies';
-import TopBar from '@/components/TopBar';
 import useChatStoreAdapter from '@/hooks/useChatStoreAdapter';
 import { useInstallationSetup } from '@/hooks/useInstallationSetup';
-import NavBar from '@/modes/claude/NavBar';
-import { useAppModeStore } from '@/store/appModeStore';
 import { useAuthStore } from '@/store/authStore';
 import { useInstallationUI } from '@/store/installationStore';
 import { useEffect, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import CloseNoticeDialog from '../Dialog/CloseNotice';
-import HistorySidebar from '../HistorySidebar';
-import InstallationErrorDialog from '../InstallStep/InstallationErrorDialog/InstallationErrorDialog';
+import NavBar from './NavBar';
+import ClaudeTopBar from './TopBar';
 
-const Layout = () => {
+const ClaudeLayout = () => {
   const {
     initState,
     isFirstLaunch,
@@ -37,9 +36,6 @@ const Layout = () => {
   } = useAuthStore();
   const [noticeOpen, setNoticeOpen] = useState(false);
 
-  const mode = useAppModeStore((s) => s.mode);
-
-  //Get Chatstore for the active project's task
   const { chatStore } = useChatStoreAdapter();
 
   const {
@@ -75,29 +71,22 @@ const Layout = () => {
     };
   }, [chatStore]);
 
-  // Determine what to show based on states
   const shouldShowOnboarding =
     initState === 'done' && isFirstLaunch && !isInstalling;
 
-  // Show install screen if: installation UI is active, user hasn't finished setup,
-  // or backend hasn't passed health check yet.
-  // isBackendReady defaults to false on each app launch (non-persisted),
-  // so the main UI is gated until health check passes — no race condition.
   const actualShouldShowInstallScreen =
     shouldShowInstallScreen || initState !== 'done' || !isBackendReady;
   const shouldShowMainContent = !actualShouldShowInstallScreen;
 
   if (!chatStore) {
     console.log(chatStore);
-
     return <div>Loading...</div>;
   }
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden">
-      <TopBar />
+      <ClaudeTopBar />
       <div className="relative h-full min-h-0 flex-1 overflow-hidden">
-        {/* Onboarding animation */}
         {shouldShowOnboarding && (
           <AnimationJson
             onComplete={() => setIsFirstLaunch(false)}
@@ -105,13 +94,11 @@ const Layout = () => {
           />
         )}
 
-        {/* Installation screen */}
         {actualShouldShowInstallScreen && <InstallDependencies />}
 
-        {/* Main app content */}
         {shouldShowMainContent && (
-          <div className={`flex h-full ${mode === 'claude' ? 'flex-row' : ''}`}>
-            {mode === 'claude' && <NavBar />}
+          <div className="flex h-full flex-row">
+            <NavBar />
             <div className="relative flex-1 overflow-hidden">
               <Outlet />
               <HistorySidebar />
@@ -136,4 +123,4 @@ const Layout = () => {
   );
 };
 
-export default Layout;
+export default ClaudeLayout;

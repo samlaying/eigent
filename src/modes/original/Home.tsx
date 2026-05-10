@@ -18,11 +18,6 @@ import Folder from '@/components/Folder';
 import UpdateElectron from '@/components/update';
 import Workflow from '@/components/WorkFlow';
 import useChatStoreAdapter from '@/hooks/useChatStoreAdapter';
-import ArtifactPanel from '@/modes/claude/ArtifactPanel';
-import ChatView from '@/modes/claude/components/ChatView';
-import ListPanel from '@/modes/claude/ListPanel';
-import { useAppModeStore } from '@/store/appModeStore';
-import { useNavigationStore } from '@/store/navigationStore';
 import { ChatTaskStatus } from '@/types/constants';
 import { ReactFlowProvider } from '@xyflow/react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -37,6 +32,7 @@ import {
 import { TriggerDialog } from '@/components/Trigger/TriggerDialog';
 import { Button } from '@/components/ui/button';
 
+import Overview from '@/pages/Project/Triggers';
 import { useAuthStore } from '@/store/authStore';
 import { usePageTabStore } from '@/store/pageTabStore';
 import {
@@ -44,7 +40,6 @@ import {
   WebSocketConnectionStatus,
 } from '@/store/triggerStore';
 import { Inbox, LayoutGrid, Plus, RefreshCw, Zap, ZapOff } from 'lucide-react';
-import Overview from './Project/Triggers';
 
 import BottomBar from '@/components/BottomBar';
 import BrowserAgentWorkspace from '@/components/BrowserAgentWorkspace';
@@ -137,9 +132,6 @@ export default function Home() {
   } = usePageTabStore();
 
   const { wsConnectionStatus, triggerReconnect } = useTriggerStore();
-  const mode = useAppModeStore((s) => s.mode);
-  const { listPanelOpen, toggleList, artifactPanelOpen, toggleArtifact } =
-    useNavigationStore();
   const authStore = useAuthStore.getState();
 
   const [activeWebviewId, setActiveWebviewId] = useState<string | null>(null);
@@ -489,399 +481,371 @@ export default function Home() {
     }
   };
 
-  // Shared workspace panel content (used by both modes)
-  const workspacePanelContent = (fullWidth: boolean = false) => (
-    <ResizablePanelGroup
-      direction="horizontal"
-      key={`${isChatBoxVisible}-${chatPanelPosition}`}
-      className="w-full items-center justify-center gap-0.5"
-    >
-      {isChatBoxVisible && chatPanelPosition === 'left' && (
-        <>
-          <ResizablePanel defaultSize={30} minSize={20} className="h-full">
-            <ChatBox />
-          </ResizablePanel>
-          <ResizableHandle
-            withHandle={true}
-            className="custom-resizable-handle"
-          />
-        </>
-      )}
-      <ResizablePanel
-        className={fullWidth ? 'h-full w-full' : 'h-full w-full min-w-[600px]'}
-      >
-        {chatStore.activeTaskId &&
-        chatStore.tasks[chatStore.activeTaskId]?.activeWorkspace ? (
-          <div className="flex h-full w-full flex-col rounded-2xl border-solid border-border-tertiary bg-surface-secondary">
-            <div className="flex w-full items-center justify-between px-2 py-2">
-              <div className="flex w-full flex-row items-center justify-start gap-4">
-                <MenuToggleGroup
-                  type="single"
-                  variant="info"
-                  size="xs"
-                  orientation="horizontal"
-                  value={activeWorkspaceTab}
-                  onValueChange={(val) =>
-                    val &&
-                    setActiveWorkspaceTab(
-                      val as 'triggers' | 'workforce' | 'inbox'
-                    )
-                  }
-                  className="rounded-lg bg-surface-primary"
-                >
-                  <MenuToggleItem
-                    value="workforce"
-                    variant="info"
-                    size="xs"
-                    icon={<LayoutGrid />}
-                    className="w-32"
-                  >
-                    {t('triggers.workspace')}
-                  </MenuToggleItem>
-                  <MenuToggleItem
-                    value="inbox"
-                    variant="info"
-                    size="xs"
-                    icon={<Inbox />}
-                    showSubIcon={unviewedTabs.has('inbox')}
-                    subIcon={
-                      <span className="h-2 w-2 rounded-full bg-red-500" />
-                    }
-                    className="w-32"
-                  >
-                    {t('triggers.agent-folder')}
-                  </MenuToggleItem>
-                  <MenuToggleItem
-                    value="triggers"
-                    variant="info"
-                    size="xs"
-                    icon={<ConnectionStatusIcon status={wsConnectionStatus} />}
-                    showSubIcon={unviewedTabs.has('triggers')}
-                    subIcon={
-                      <span className="h-2 w-2 rounded-full bg-text-error" />
-                    }
-                    className="w-32"
-                    rightElement={
-                      wsConnectionStatus !== 'connected' && (
-                        <Popover>
-                          <PopoverPrimitive.Trigger asChild>
-                            <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary">
-                              <RefreshCw
-                                className={`h-3 w-3 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
-                              />
-                            </div>
-                          </PopoverPrimitive.Trigger>
-                          <PopoverContent
-                            className="w-64 p-4"
-                            side="bottom"
-                            align="end"
-                          >
-                            <div className="flex flex-col gap-3">
-                              <p className="text-body-sm text-text-body">
-                                Reconnect to trigger listener
-                              </p>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                className="w-full items-center justify-center"
-                                onClick={triggerReconnect}
-                              >
-                                <RefreshCw
-                                  className={`mr-2 h-4 w-4 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
-                                />{' '}
-                                Reconnect
-                              </Button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )
-                    }
-                  >
-                    {t('triggers.title')}
-                  </MenuToggleItem>
-                </MenuToggleGroup>
-              </div>
-              <div className="flex items-center gap-2">
-                {activeWorkspaceTab !== 'inbox' && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="w-24 items-center justify-center rounded-lg"
-                    onClick={() => {
-                      if (activeWorkspaceTab === 'workforce')
-                        setAddWorkerDialogOpen(true);
-                      else if (activeWorkspaceTab === 'triggers')
-                        setTriggerDialogOpen(true);
-                    }}
-                  >
-                    <Plus />
-                    {activeWorkspaceTab === 'workforce' && t('triggers.add')}
-                    {activeWorkspaceTab === 'triggers' && t('triggers.create')}
-                  </Button>
-                )}
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                multiple
-                className="hidden"
-              />
-              <AddWorker
-                isOpen={addWorkerDialogOpen}
-                onOpenChange={setAddWorkerDialogOpen}
-              />
-              <TriggerDialog
-                selectedTrigger={null}
-                isOpen={triggerDialogOpen}
-                onOpenChange={setTriggerDialogOpen}
-              />
-            </div>
-            <div className="min-h-0 w-full flex-1">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeWorkspaceTab}
-                  initial={{ opacity: 0, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, filter: 'blur(4px)' }}
-                  transition={{ duration: 0.2 }}
-                  className="h-full w-full"
-                >
-                  {renderWorkspaceContent()}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            {activeWorkspaceTab === 'workforce' && (
-              <BottomBar
-                onToggleChatBox={toggleChatBox}
-                isChatBoxVisible={isChatBoxVisible}
-              />
-            )}
-          </div>
-        ) : (
-          <div className="flex h-full w-full flex-col rounded-2xl border-solid border-border-tertiary bg-surface-secondary">
-            <div className="flex w-full items-center justify-between px-2 py-2">
-              <div className="flex w-full flex-row items-center justify-start gap-4">
-                <MenuToggleGroup
-                  type="single"
-                  variant="info"
-                  size="xs"
-                  orientation="horizontal"
-                  value={activeWorkspaceTab}
-                  onValueChange={(val) =>
-                    val &&
-                    setActiveWorkspaceTab(
-                      val as 'triggers' | 'workforce' | 'inbox'
-                    )
-                  }
-                  className="rounded-lg bg-surface-primary"
-                >
-                  <MenuToggleItem
-                    value="workforce"
-                    variant="info"
-                    size="xs"
-                    icon={<LayoutGrid />}
-                    className="w-32"
-                  >
-                    {t('triggers.workspace')}
-                  </MenuToggleItem>
-                  <MenuToggleItem
-                    value="inbox"
-                    variant="info"
-                    size="xs"
-                    icon={<Inbox />}
-                    showSubIcon={unviewedTabs.has('inbox')}
-                    subIcon={
-                      <span className="h-2 w-2 rounded-full bg-red-500" />
-                    }
-                    className="w-32"
-                  >
-                    {t('triggers.agent-folder')}
-                  </MenuToggleItem>
-                  <MenuToggleItem
-                    value="triggers"
-                    variant="info"
-                    size="xs"
-                    icon={<ConnectionStatusIcon status={wsConnectionStatus} />}
-                    showSubIcon={unviewedTabs.has('triggers')}
-                    subIcon={
-                      <span className="h-2 w-2 rounded-full bg-red-500" />
-                    }
-                    className="w-32"
-                    rightElement={
-                      wsConnectionStatus !== 'connected' && (
-                        <Popover>
-                          <PopoverPrimitive.Trigger asChild>
-                            <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary">
-                              <RefreshCw
-                                className={`h-3 w-3 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
-                              />
-                            </div>
-                          </PopoverPrimitive.Trigger>
-                          <PopoverContent
-                            className="w-64 p-4"
-                            side="bottom"
-                            align="end"
-                          >
-                            <div className="flex flex-col gap-3">
-                              <p className="text-sm text-text-body">
-                                Reconnect to trigger listener
-                              </p>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                className="w-full"
-                                onClick={triggerReconnect}
-                              >
-                                <RefreshCw
-                                  className={`mr-2 h-4 w-4 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
-                                />{' '}
-                                Reconnect
-                              </Button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )
-                    }
-                  >
-                    {t('triggers.triggers')}
-                  </MenuToggleItem>
-                </MenuToggleGroup>
-              </div>
-              <div className="flex items-center gap-2">
-                {activeWorkspaceTab !== 'inbox' && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="rounded-lg"
-                    onClick={() => {
-                      if (activeWorkspaceTab === 'workforce')
-                        setAddWorkerDialogOpen(true);
-                      else if (activeWorkspaceTab === 'triggers')
-                        setTriggerDialogOpen(true);
-                    }}
-                  >
-                    <Plus />
-                    {activeWorkspaceTab === 'workforce' && t('triggers.add')}
-                    {activeWorkspaceTab === 'triggers' && t('triggers.create')}
-                  </Button>
-                )}
-              </div>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                multiple
-                className="hidden"
-              />
-              <AddWorker
-                isOpen={addWorkerDialogOpen}
-                onOpenChange={setAddWorkerDialogOpen}
-              />
-              <TriggerDialog
-                selectedTrigger={null}
-                isOpen={triggerDialogOpen}
-                onOpenChange={setTriggerDialogOpen}
-              />
-            </div>
-            <div className="min-h-0 w-full flex-1">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeWorkspaceTab}
-                  initial={{ opacity: 0, filter: 'blur(4px)' }}
-                  animate={{ opacity: 1, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, filter: 'blur(4px)' }}
-                  transition={{ duration: 0.2 }}
-                  className="h-full w-full"
-                >
-                  {renderWorkspaceContent()}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            {activeWorkspaceTab === 'workforce' && (
-              <BottomBar
-                onToggleChatBox={toggleChatBox}
-                isChatBoxVisible={isChatBoxVisible}
-              />
-            )}
-          </div>
-        )}
-      </ResizablePanel>
-      {isChatBoxVisible && chatPanelPosition === 'right' && (
-        <>
-          <ResizableHandle
-            withHandle={true}
-            className="custom-resizable-handle"
-          />
-          <ResizablePanel defaultSize={30} minSize={20} className="h-full">
-            <ChatBox />
-          </ResizablePanel>
-        </>
-      )}
-    </ResizablePanelGroup>
-  );
-
-  if (mode === 'claude') {
-    return (
-      <ReactFlowProvider>
-        <div className="flex h-full min-h-0 flex-row overflow-hidden px-2 pb-2 pt-10">
-          <ResizablePanelGroup
-            direction="horizontal"
-            className="h-full w-full gap-0.5"
-          >
-            {listPanelOpen && (
-              <>
-                <ResizablePanel
-                  defaultSize={18}
-                  minSize={12}
-                  maxSize={30}
-                  id="list-panel"
-                  className="h-full"
-                >
-                  <div className="h-full overflow-hidden rounded-2xl border border-border-secondary">
-                    <ListPanel />
-                  </div>
-                </ResizablePanel>
-                <ResizableHandle
-                  withHandle={true}
-                  className="custom-resizable-handle"
-                />
-              </>
-            )}
-            <ResizablePanel className="h-full" id="main-panel">
-              <ChatView />
-            </ResizablePanel>
-            {artifactPanelOpen && (
-              <>
-                <ResizableHandle
-                  withHandle={true}
-                  className="custom-resizable-handle"
-                />
-                <ResizablePanel
-                  defaultSize={22}
-                  minSize={12}
-                  maxSize={40}
-                  id="artifact-panel"
-                  className="h-full"
-                >
-                  <div className="h-full overflow-hidden rounded-2xl border border-border-secondary">
-                    <ArtifactPanel />
-                  </div>
-                </ResizablePanel>
-              </>
-            )}
-          </ResizablePanelGroup>
-          <UpdateElectron />
-        </div>
-      </ReactFlowProvider>
-    );
-  }
-
+  // Render Tasks tab content (default)
   return (
     <ReactFlowProvider>
       <div className="flex h-full min-h-0 flex-row overflow-hidden px-2 pb-2 pt-10">
         <div className="relative flex h-full min-h-0 min-w-0 flex-1 items-center justify-center gap-4 overflow-hidden">
-          {workspacePanelContent()}
+          <ResizablePanelGroup
+            direction="horizontal"
+            key={`${isChatBoxVisible}-${chatPanelPosition}`}
+            className="w-full items-center justify-center gap-0.5"
+          >
+            {/* ChatBox Panel - Left side */}
+            {isChatBoxVisible && chatPanelPosition === 'left' && (
+              <>
+                <ResizablePanel
+                  defaultSize={30}
+                  minSize={20}
+                  className="h-full"
+                >
+                  <ChatBox />
+                </ResizablePanel>
+                <ResizableHandle
+                  withHandle={true}
+                  className="custom-resizable-handle"
+                />
+              </>
+            )}
+            <ResizablePanel className="h-full w-full min-w-[600px]">
+              {chatStore.activeTaskId &&
+              chatStore.tasks[chatStore.activeTaskId]?.activeWorkspace ? (
+                <div className="flex h-full w-full flex-col rounded-2xl border-solid border-border-tertiary bg-surface-secondary">
+                  {/* Header with workspace tabs */}
+                  <div className="flex w-full items-center justify-between px-2 py-2">
+                    <div className="flex w-full flex-row items-center justify-start gap-4">
+                      <MenuToggleGroup
+                        type="single"
+                        variant="info"
+                        size="xs"
+                        orientation="horizontal"
+                        value={activeWorkspaceTab}
+                        onValueChange={(val) =>
+                          val &&
+                          setActiveWorkspaceTab(
+                            val as 'triggers' | 'workforce' | 'inbox'
+                          )
+                        }
+                        className="rounded-lg bg-surface-primary"
+                      >
+                        <MenuToggleItem
+                          value="workforce"
+                          variant="info"
+                          size="xs"
+                          icon={<LayoutGrid />}
+                          className="w-32"
+                        >
+                          {t('triggers.workspace')}
+                        </MenuToggleItem>
+                        <MenuToggleItem
+                          value="inbox"
+                          variant="info"
+                          size="xs"
+                          icon={<Inbox />}
+                          showSubIcon={unviewedTabs.has('inbox')}
+                          subIcon={
+                            <span className="h-2 w-2 rounded-full bg-red-500" />
+                          }
+                          className="w-32"
+                        >
+                          {t('triggers.agent-folder')}
+                        </MenuToggleItem>
+                        <MenuToggleItem
+                          value="triggers"
+                          variant="info"
+                          size="xs"
+                          icon={
+                            <ConnectionStatusIcon status={wsConnectionStatus} />
+                          }
+                          showSubIcon={unviewedTabs.has('triggers')}
+                          subIcon={
+                            <span className="h-2 w-2 rounded-full bg-text-error" />
+                          }
+                          className="w-32"
+                          rightElement={
+                            wsConnectionStatus !== 'connected' && (
+                              <Popover>
+                                <PopoverPrimitive.Trigger asChild>
+                                  <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary">
+                                    <RefreshCw
+                                      className={`h-3 w-3 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
+                                    />
+                                  </div>
+                                </PopoverPrimitive.Trigger>
+                                <PopoverContent
+                                  className="w-64 p-4"
+                                  side="bottom"
+                                  align="end"
+                                >
+                                  <div className="flex flex-col gap-3">
+                                    <p className="text-body-sm text-text-body">
+                                      Reconnect to trigger listener
+                                    </p>
+                                    <Button
+                                      variant="primary"
+                                      size="sm"
+                                      className="w-full items-center justify-center"
+                                      onClick={triggerReconnect}
+                                    >
+                                      <RefreshCw
+                                        className={`mr-2 h-4 w-4 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
+                                      />
+                                      Reconnect
+                                    </Button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )
+                          }
+                        >
+                          {t('triggers.title')}
+                        </MenuToggleItem>
+                      </MenuToggleGroup>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {activeWorkspaceTab !== 'inbox' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="w-24 items-center justify-center rounded-lg"
+                          onClick={() => {
+                            if (activeWorkspaceTab === 'workforce') {
+                              setAddWorkerDialogOpen(true);
+                            } else if (activeWorkspaceTab === 'triggers') {
+                              setTriggerDialogOpen(true);
+                            }
+                          }}
+                        >
+                          <Plus />
+                          {activeWorkspaceTab === 'workforce' &&
+                            t('triggers.add')}
+                          {activeWorkspaceTab === 'triggers' &&
+                            t('triggers.create')}
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Hidden file input for upload */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      multiple
+                      className="hidden"
+                    />
+
+                    {/* AddWorker Dialog */}
+                    <AddWorker
+                      isOpen={addWorkerDialogOpen}
+                      onOpenChange={setAddWorkerDialogOpen}
+                    />
+
+                    {/* TriggerDialog */}
+                    <TriggerDialog
+                      selectedTrigger={null}
+                      isOpen={triggerDialogOpen}
+                      onOpenChange={setTriggerDialogOpen}
+                    />
+                  </div>
+                  <div className="min-h-0 w-full flex-1">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeWorkspaceTab}
+                        initial={{ opacity: 0, filter: 'blur(4px)' }}
+                        animate={{ opacity: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, filter: 'blur(4px)' }}
+                        transition={{ duration: 0.2 }}
+                        className="h-full w-full"
+                      >
+                        {renderWorkspaceContent()}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                  {activeWorkspaceTab === 'workforce' && (
+                    <BottomBar
+                      onToggleChatBox={toggleChatBox}
+                      isChatBoxVisible={isChatBoxVisible}
+                    />
+                  )}
+                </div>
+              ) : (
+                // Show default workspace when activeTaskId is null or task doesn't exist
+                <div className="flex h-full w-full flex-col rounded-2xl border-solid border-border-tertiary bg-surface-secondary">
+                  {/* Header with workspace tabs */}
+                  <div className="flex w-full items-center justify-between px-2 py-2">
+                    <div className="flex w-full flex-row items-center justify-start gap-4">
+                      <MenuToggleGroup
+                        type="single"
+                        variant="info"
+                        size="xs"
+                        orientation="horizontal"
+                        value={activeWorkspaceTab}
+                        onValueChange={(val) =>
+                          val &&
+                          setActiveWorkspaceTab(
+                            val as 'triggers' | 'workforce' | 'inbox'
+                          )
+                        }
+                        className="rounded-lg bg-surface-primary"
+                      >
+                        <MenuToggleItem
+                          value="workforce"
+                          variant="info"
+                          size="xs"
+                          icon={<LayoutGrid />}
+                          className="w-32"
+                        >
+                          {t('triggers.workspace')}
+                        </MenuToggleItem>
+                        <MenuToggleItem
+                          value="inbox"
+                          variant="info"
+                          size="xs"
+                          icon={<Inbox />}
+                          showSubIcon={unviewedTabs.has('inbox')}
+                          subIcon={
+                            <span className="h-2 w-2 rounded-full bg-red-500" />
+                          }
+                          className="w-32"
+                        >
+                          {t('triggers.agent-folder')}
+                        </MenuToggleItem>
+                        <MenuToggleItem
+                          value="triggers"
+                          variant="info"
+                          size="xs"
+                          icon={
+                            <ConnectionStatusIcon status={wsConnectionStatus} />
+                          }
+                          showSubIcon={unviewedTabs.has('triggers')}
+                          subIcon={
+                            <span className="h-2 w-2 rounded-full bg-red-500" />
+                          }
+                          className="w-32"
+                          rightElement={
+                            wsConnectionStatus !== 'connected' && (
+                              <Popover>
+                                <PopoverPrimitive.Trigger asChild>
+                                  <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary">
+                                    <RefreshCw
+                                      className={`h-3 w-3 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
+                                    />
+                                  </div>
+                                </PopoverPrimitive.Trigger>
+                                <PopoverContent
+                                  className="w-64 p-4"
+                                  side="bottom"
+                                  align="end"
+                                >
+                                  <div className="flex flex-col gap-3">
+                                    <p className="text-sm text-text-body">
+                                      Reconnect to trigger listener
+                                    </p>
+                                    <Button
+                                      variant="primary"
+                                      size="sm"
+                                      className="w-full"
+                                      onClick={triggerReconnect}
+                                    >
+                                      <RefreshCw
+                                        className={`mr-2 h-4 w-4 ${wsConnectionStatus === 'connecting' ? 'animate-spin' : ''}`}
+                                      />
+                                      Reconnect
+                                    </Button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )
+                          }
+                        >
+                          {t('triggers.triggers')}
+                        </MenuToggleItem>
+                      </MenuToggleGroup>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {activeWorkspaceTab !== 'inbox' && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          className="rounded-lg"
+                          onClick={() => {
+                            if (activeWorkspaceTab === 'workforce') {
+                              setAddWorkerDialogOpen(true);
+                            } else if (activeWorkspaceTab === 'triggers') {
+                              setTriggerDialogOpen(true);
+                            }
+                          }}
+                        >
+                          <Plus />
+                          {activeWorkspaceTab === 'workforce' &&
+                            t('triggers.add')}
+                          {activeWorkspaceTab === 'triggers' &&
+                            t('triggers.create')}
+                        </Button>
+                      )}
+                    </div>
+                    {/* Hidden file input for upload */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileUpload}
+                      multiple
+                      className="hidden"
+                    />
+
+                    {/* AddWorker Dialog */}
+                    <AddWorker
+                      isOpen={addWorkerDialogOpen}
+                      onOpenChange={setAddWorkerDialogOpen}
+                    />
+
+                    {/* TriggerDialog */}
+                    <TriggerDialog
+                      selectedTrigger={null}
+                      isOpen={triggerDialogOpen}
+                      onOpenChange={setTriggerDialogOpen}
+                    />
+                  </div>
+                  <div className="min-h-0 w-full flex-1">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeWorkspaceTab}
+                        initial={{ opacity: 0, filter: 'blur(4px)' }}
+                        animate={{ opacity: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, filter: 'blur(4px)' }}
+                        transition={{ duration: 0.2 }}
+                        className="h-full w-full"
+                      >
+                        {renderWorkspaceContent()}
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+                  {activeWorkspaceTab === 'workforce' && (
+                    <BottomBar
+                      onToggleChatBox={toggleChatBox}
+                      isChatBoxVisible={isChatBoxVisible}
+                    />
+                  )}
+                </div>
+              )}
+            </ResizablePanel>
+            {/* ChatBox Panel - Right side */}
+            {isChatBoxVisible && chatPanelPosition === 'right' && (
+              <>
+                <ResizableHandle
+                  withHandle={true}
+                  className="custom-resizable-handle"
+                />
+                <ResizablePanel
+                  defaultSize={30}
+                  minSize={20}
+                  className="h-full"
+                >
+                  <ChatBox />
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
         </div>
         <UpdateElectron />
       </div>

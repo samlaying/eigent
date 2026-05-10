@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LocaleEnum, switchLanguage } from '@/i18n';
 import { SITE_URL } from '@/lib';
+import { useAppModeStore } from '@/store/appModeStore';
 import { useAuthStore } from '@/store/authStore';
 import { useInstallationStore } from '@/store/installationStore';
 import { LogOut, Settings } from 'lucide-react';
@@ -36,6 +37,61 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import useChatStoreAdapter from '@/hooks/useChatStoreAdapter';
+
+function InterfaceModeSwitch() {
+  const { mode, setMode, toggleMode } = useAppModeStore();
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex w-full flex-row items-center gap-3">
+      <button
+        onClick={() => setMode('original')}
+        className={`flex flex-1 flex-col items-center gap-1 rounded-xl border-2 px-4 py-3 transition-all ${
+          mode === 'original'
+            ? 'border-bg-fill-info-primary bg-surface-tertiary'
+            : 'border-transparent bg-surface-primary hover:bg-surface-tertiary'
+        }`}
+      >
+        <span
+          className={`text-body-sm font-semibold ${
+            mode === 'original' ? 'text-text-heading' : 'text-text-secondary'
+          }`}
+        >
+          {t('setting.mode-original', 'Original')}
+        </span>
+        <span className="text-body-xs text-text-tertiary">
+          {t('setting.mode-original-desc', 'Workforce / Inbox / Triggers')}
+        </span>
+      </button>
+      <button
+        onClick={() => setMode('claude')}
+        className={`flex flex-1 flex-col items-center gap-1 rounded-xl border-2 px-4 py-3 transition-all ${
+          mode === 'claude'
+            ? 'border-bg-fill-info-primary bg-surface-tertiary'
+            : 'border-transparent bg-surface-primary hover:bg-surface-tertiary'
+        }`}
+      >
+        <span
+          className={`text-body-sm font-semibold ${
+            mode === 'claude' ? 'text-text-heading' : 'text-text-secondary'
+          }`}
+        >
+          {t('setting.mode-claude', 'Claude Style')}
+        </span>
+        <span className="text-body-xs text-text-tertiary">
+          {t('setting.mode-claude-desc', 'Sidebar nav / Chat list / Artifacts')}
+        </span>
+      </button>
+      <button
+        onClick={toggleMode}
+        className="flex items-center gap-1 rounded-lg px-2 py-2 text-body-xs text-text-tertiary transition-colors hover:bg-surface-tertiary hover:text-text-secondary"
+        title={t('setting.toggle-shortcut', 'Keyboard shortcut: Ctrl+Shift+M')}
+      >
+        <span className="text-[10px] opacity-60">Ctrl+Shift+M</span>
+      </button>
+    </div>
+  );
+}
 
 export default function SettingGeneral() {
   const { t } = useTranslation();
@@ -351,6 +407,22 @@ export default function SettingGeneral() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Interface Mode Section */}
+        <div className="item-center flex flex-col justify-between gap-4 rounded-2xl bg-surface-secondary px-6 py-4">
+          <div>
+            <div className="text-body-base font-bold text-text-heading">
+              {t('setting.interface-mode', 'Interface Mode')}
+            </div>
+            <div className="mt-1 text-body-sm text-text-secondary">
+              {t(
+                'setting.interface-mode-description',
+                'Switch between Original and Claude-style layout'
+              )}
+            </div>
+          </div>
+          <InterfaceModeSwitch />
         </div>
 
         {/* Network Proxy Section */}

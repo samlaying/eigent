@@ -27,21 +27,16 @@ import { TooltipSimple } from '@/components/ui/tooltip';
 import useChatStoreAdapter from '@/hooks/useChatStoreAdapter';
 import { SITE_URL } from '@/lib';
 import { share } from '@/lib/share';
-import { useAppModeStore } from '@/store/appModeStore';
 import { useAuthStore } from '@/store/authStore';
 import { useInstallationUI } from '@/store/installationStore';
 import { usePageTabStore } from '@/store/pageTabStore';
-import { useSidebarStore } from '@/store/sidebarStore';
 import { ChatTaskStatus } from '@/types/constants';
 import {
-  ChevronDown,
   ChevronLeft,
   FileDown,
-  House,
   Minus,
   Plus,
   Power,
-  Settings,
   Square,
   X,
 } from 'lucide-react';
@@ -50,17 +45,14 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-function HeaderWin() {
+function ClaudeTopBar() {
   const { t } = useTranslation();
   const titlebarRef = useRef<HTMLDivElement>(null);
   const controlsRef = useRef<HTMLDivElement>(null);
   const [platform, setPlatform] = useState<string>('');
   const navigate = useNavigate();
   const location = useLocation();
-  //Get Chatstore for the active project's task
   const { chatStore, projectStore } = useChatStoreAdapter();
-  const mode = useAppModeStore((s) => s.mode);
-  const { toggle } = useSidebarStore();
   const { chatPanelPosition, setChatPanelPosition } = usePageTabStore();
   const appearance = useAuthStore((state) => state.appearance);
   const [endDialogOpen, setEndDialogOpen] = useState(false);
@@ -73,10 +65,10 @@ function HeaderWin() {
     const p = window.electronAPI.getPlatform();
     setPlatform(p);
   }, []);
+
   const exportLog = async () => {
     try {
       const response = await window.electronAPI.exportLog();
-
       if (!response.success) {
         alert(t('layout.export-cancelled') + response.error);
         return;
@@ -91,16 +83,7 @@ function HeaderWin() {
     }
   };
 
-  // create new project handler reused by plus icon and label
   const createNewProject = () => {
-    if (mode === 'claude') {
-      import('@/modes/claude/store/chatStore').then(
-        ({ useClaudeChatStore }) => {
-          useClaudeChatStore.getState().createConversation();
-        }
-      );
-    }
-    //Handles refocusing id & nonduplicate internally
     projectStore.createProject('new project');
     navigate('/');
   };
@@ -135,7 +118,6 @@ function HeaderWin() {
     }
   };
 
-  //TODO: Mark ChatStore details as completed
   const handleEndProject = async () => {
     const taskId = chatStore.activeTaskId;
     const projectId = projectStore.activeProjectId;
@@ -151,25 +133,21 @@ function HeaderWin() {
     try {
       const task = chatStore.tasks[taskId];
 
-      // Stop the task if it's running
       if (task && task.status === ChatTaskStatus.RUNNING) {
         await fetchPut(`/task/${taskId}/take-control`, {
           action: 'stop',
         });
       }
 
-      // Stop Workforce
       try {
         await fetchDelete(`/chat/${projectId}`);
       } catch (error) {
         console.log('Task may not exist on backend:', error);
       }
 
-      // Delete from history using historyId
       if (historyId && task.status !== ChatTaskStatus.FINISHED) {
         try {
           await proxyFetchDelete(`/api/v1/chat/history/${historyId}`);
-          // Remove from local store
           chatStore.removeTask(taskId);
         } catch (error) {
           console.log('History may not exist:', error);
@@ -180,11 +158,7 @@ function HeaderWin() {
         );
       }
 
-      // Create a completely new project instead of just a new task
-      // This ensures we start fresh without any residual state
       projectStore.createProject('new project');
-
-      // Navigate to home with replace to force refresh
       navigate('/', { replace: true });
 
       toast.success(t('layout.project-ended-successfully'), {
@@ -247,20 +221,6 @@ function HeaderWin() {
           {location.pathname !== '/history' && (
             <div className="flex items-center">
               <TooltipSimple
-                content={t('layout.home')}
-                side="bottom"
-                align="center"
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="no-drag rounded-full"
-                  onClick={() => navigate('/history')}
-                >
-                  <House className="h-4 w-4" />
-                </Button>
-              </TooltipSimple>
-              <TooltipSimple
                 content={t('layout.new-project')}
                 side="bottom"
                 align="center"
@@ -279,43 +239,13 @@ function HeaderWin() {
           {location.pathname !== '/history' && (
             <>
               {activeTaskTitle === t('layout.new-project') ? (
-                <TooltipSimple
-                  content={t('layout.new-project')}
-                  side="bottom"
-                  align="center"
-                >
-                  <Button
-                    id="active-task-title-btn"
-                    variant="ghost"
-                    className="no-drag rounded-full text-base font-bold"
-                    onClick={toggle}
-                    size="sm"
-                  >
-                    <span className="inline-block max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap align-middle">
-                      {t('layout.new-project')}
-                    </span>
-                    <ChevronDown />
-                  </Button>
-                </TooltipSimple>
+                <span className="inline-block max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap align-middle text-base font-bold">
+                  {t('layout.new-project')}
+                </span>
               ) : (
-                <TooltipSimple
-                  content={activeTaskTitle}
-                  side="bottom"
-                  align="center"
-                >
-                  <Button
-                    id="active-task-title-btn"
-                    variant="ghost"
-                    size="sm"
-                    className="no-drag text-base font-bold"
-                    onClick={toggle}
-                  >
-                    <span className="inline-block max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap align-middle">
-                      {activeTaskTitle}
-                    </span>
-                    <ChevronDown />
-                  </Button>
-                </TooltipSimple>
+                <span className="inline-block max-w-[300px] overflow-hidden text-ellipsis whitespace-nowrap align-middle text-base font-bold">
+                  {activeTaskTitle}
+                </span>
               )}
             </>
           )}
@@ -407,20 +337,6 @@ function HeaderWin() {
                 />
               </Button>
             </TooltipSimple>
-            <TooltipSimple
-              content={t('layout.settings')}
-              side="bottom"
-              align="end"
-            >
-              <Button
-                onClick={() => navigate('/history?tab=settings')}
-                variant="ghost"
-                size="icon"
-                className="no-drag rounded-full"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            </TooltipSimple>
           </div>
         )}
         {location.pathname === '/history' && (
@@ -431,7 +347,6 @@ function HeaderWin() {
           ></div>
         )}
       </div>
-      {/* Custom window controls only for Linux (Windows and macOS use native controls) */}
       {platform !== 'darwin' && platform !== 'win32' && (
         <div
           className="no-drag flex h-full items-center"
@@ -468,4 +383,4 @@ function HeaderWin() {
   );
 }
 
-export default HeaderWin;
+export default ClaudeTopBar;
