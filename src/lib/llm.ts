@@ -61,6 +61,15 @@ export const INIT_PROVODERS: Provider[] = [
     model_type: '',
   },
   {
+    id: 'siliconflow',
+    name: 'SiliconFlow',
+    apiKey: import.meta.env.VITE_SILICONFLOW_API_KEY || '',
+    apiHost: 'https://api.siliconflow.cn/v1',
+    description: 'SiliconFlow model configuration.',
+    is_valid: !!import.meta.env.VITE_SILICONFLOW_API_KEY,
+    model_type: import.meta.env.VITE_SILICONFLOW_DEFAULT_MODEL || '',
+  },
+  {
     id: 'deepseek',
     name: 'Deepseek',
     apiKey: '',
