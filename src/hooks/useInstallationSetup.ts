@@ -48,6 +48,9 @@ export const useInstallationSetup = () => {
     (state) => state.setNeedsBackendRestart
   );
 
+  const IS_LOCAL_MODE = import.meta.env.VITE_USE_LOCAL_PROXY === 'true';
+  const LOCAL_BACKEND_PORT = 2334;
+
   // Shared function to poll backend status
   const startBackendPolling = useCallback(() => {
     console.log('[useInstallationSetup] Starting backend polling');
@@ -55,7 +58,9 @@ export const useInstallationSetup = () => {
     // Immediately check backend status once
     const checkBackendStatus = async () => {
       try {
-        const backendPort = await window.electronAPI.getBackendPort();
+        const backendPort = IS_LOCAL_MODE
+          ? LOCAL_BACKEND_PORT
+          : await window.electronAPI.getBackendPort();
         if (backendPort && backendPort > 0) {
           console.log(
             '[useInstallationSetup] Backend immediately detected on port:',
@@ -101,7 +106,9 @@ export const useInstallationSetup = () => {
       // This is a fallback in case the backend-ready event is missed
       const pollInterval = setInterval(async () => {
         try {
-          const backendPort = await window.electronAPI.getBackendPort();
+          const backendPort = IS_LOCAL_MODE
+            ? LOCAL_BACKEND_PORT
+            : await window.electronAPI.getBackendPort();
           if (backendPort && backendPort > 0) {
             console.log(
               '[useInstallationSetup] Backend poll detected ready on port:',

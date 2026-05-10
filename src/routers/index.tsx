@@ -12,7 +12,6 @@
 // limitations under the License.
 // ========= Copyright 2025-2026 @ Eigent.ai All Rights Reserved. =========
 
-import { proxyFetchPost } from '@/api/http';
 import { useAuthStore } from '@/store/authStore';
 import { lazy, useEffect, useReducer } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
@@ -75,6 +74,24 @@ const ProtectedRoute = () => {
     setModelType,
   } = useAuthStore();
   useEffect(() => {
+    // Local mode: skip auth entirely for local development
+    if (IS_LOCAL_MODE) {
+      if (!token) {
+        setAuth({
+          token: 'local-dev',
+          email: 'dev@local',
+          username: 'dev',
+          user_id: 0,
+        });
+        setLocalProxyValue(import.meta.env.VITE_USE_LOCAL_PROXY || null);
+        setModelType('custom');
+        setInitState('done');
+        setIsFirstLaunch(false);
+      }
+      dispatch({ type: 'INITIALIZE', payload: { isAuthenticated: true } });
+      return;
+    }
+
     // Check VITE_USE_LOCAL_PROXY value on app startup
     if (token) {
       const currentProxyValue = import.meta.env.VITE_USE_LOCAL_PROXY || null;
@@ -87,36 +104,6 @@ const ProtectedRoute = () => {
         dispatch({ type: 'LOGOUT' });
         return;
       }
-    }
-
-    // Local mode: auto-login when no token
-    if (IS_LOCAL_MODE && !token) {
-      proxyFetchPost('/api/v1/user/auto-login', {})
-        .then((data) => {
-          if (data && data.token) {
-            setAuth({ email: data.email, ...data });
-            setLocalProxyValue(import.meta.env.VITE_USE_LOCAL_PROXY || null);
-            setModelType('custom');
-            setInitState('done');
-            setIsFirstLaunch(false);
-            dispatch({
-              type: 'INITIALIZE',
-              payload: { isAuthenticated: true },
-            });
-          } else {
-            dispatch({
-              type: 'INITIALIZE',
-              payload: { isAuthenticated: false },
-            });
-          }
-        })
-        .catch(() => {
-          dispatch({
-            type: 'INITIALIZE',
-            payload: { isAuthenticated: false },
-          });
-        });
-      return;
     }
 
     dispatch({ type: 'INITIALIZE', payload: { isAuthenticated: !!token } });

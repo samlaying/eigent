@@ -53,6 +53,7 @@ const Layout = () => {
   useInstallationSetup();
 
   useEffect(() => {
+    if (!chatStore) return;
     const handleBeforeClose = () => {
       const currentStatus =
         chatStore.tasks[chatStore.activeTaskId as string]?.status;
@@ -68,7 +69,7 @@ const Layout = () => {
     return () => {
       window.ipcRenderer.removeAllListeners('before-close');
     };
-  }, [chatStore.tasks, chatStore.activeTaskId]);
+  }, [chatStore]);
 
   // Determine what to show based on states
   const shouldShowOnboarding =
